@@ -96,8 +96,8 @@ app.use('/api/claude', claudeRoutes);
 // Centralized Error Handling Middleware
 app.use(errorHandler);
 
-// Start Server
-if (process.env.NODE_ENV !== 'test') {
+// Start Server (only when not running inside Vercel serverless functions)
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'test') {
   server.listen(env.PORT, () => {
     console.log(`🚀 Vaani API Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
     console.log(`📡 Real-time Socket.IO initialized`);
@@ -105,4 +105,6 @@ if (process.env.NODE_ENV !== 'test') {
   });
 }
 
+export default app;
 export { app, server };
+
