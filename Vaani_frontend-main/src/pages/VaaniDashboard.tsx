@@ -138,7 +138,7 @@ export const VaaniDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Center Grid: Voice Cards (Left) + 360° Character (Right/Center) */}
+        {/* Center Grid: Voice Cards (Left) + Vaani AI Healthcare Character (Right/Center) */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center flex-1">
           
           {/* Left Column: Voice Assistant Card + Try These Commands */}
@@ -153,7 +153,7 @@ export const VaaniDashboard: React.FC = () => {
             />
           </div>
 
-          {/* Center/Right: 360° Interactive Vaani Character */}
+          {/* Center/Right: Permanent Front-Facing Vaani Character Centerpiece */}
           <div className="md:col-span-7 flex items-center justify-center relative min-h-[440px]">
             <VaaniAvatarCenterpiece
               isListening={isListening}
