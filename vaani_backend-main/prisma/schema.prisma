@@ -1,0 +1,272 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  ASHA
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum VerificationStatus {
+  VERIFIED
+  WARNING
+  SUSPICIOUS
+}
+
+enum AlertStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+}
+
+model User {
+  id           String      @id @default(uuid())
+  name         String
+  email        String      @unique
+  phone        String
+  passwordHash String
+  role         Role        @default(ASHA)
+  profilePhoto String?
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  ashaWorker   ASHAWorker?
+  auditLogs    AuditLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Village {
+  id         String      @id @default(uuid())
+  name       String      @unique
+  district   String
+  state      String
+  latitude   Float
+  longitude  Float
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  workers    ASHAWorker[]
+  households Household[]
+
+  @@index([name])
+  @@index([district])
+}
+
+model ASHAWorker {
+  id          String      @id @default(uuid())
+  userId      String      @unique
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  villageId   String
+  village     Village     @relation(fields: [villageId], references: [id])
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  visits      Visit[]
+  incentives  Incentive[]
+  followUps   FollowUp[]
+
+  @@index([userId])
+  @@index([villageId])
+}
+
+model Household {
+  id                String    @id @default(uuid())
+  name              String
+  familyName        String
+  headOfFamily      String
+  villageId         String
+  village           Village   @relation(fields: [villageId], references: [id], onDelete: Cascade)
+  membersCount      Int       @default(4)
+  hasPregnantMother Boolean   @default(false)
+  hasInfantsUnder5  Boolean   @default(false)
+  address           String
+  latitude          Float
+  longitude         Float
+  lastVisitDate     DateTime?
+  lastVisitSeverity Severity?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  patients          Patient[]
+  visits            Visit[]
+
+  @@index([villageId])
+  @@index([familyName])
+}
+
+model Patient {
+  id              String         @id @default(uuid())
+  householdId     String
+  household       Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name            String
+  age             Float?
+  gender          String?
+  patientCategory String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  healthRecords   HealthRecord[]
+
+  @@index([householdId])
+  @@index([name])
+}
+
+model Visit {
+  id                 String             @id @default(uuid())
+  ashaWorkerId       String
+  ashaWorker         ASHAWorker         @relation(fields: [ashaWorkerId], references: [id], onDelete: Cascade)
+  householdId        String
+  household          Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  transcript         String             @db.Text
+  structuredData     Json
+  visitTime          DateTime           @default(now())
+  latitude           Float
+  longitude          Float
+  locationAccuracy   Float              @default(10)
+  severity           Severity           @default(LOW)
+  status             String             @default("active")
+  verificationStatus VerificationStatus @default(VERIFIED)
+  verificationScore  Float              @default(95)
+  verificationReasons Json?
+  aiConfidence       Float              @default(0.92)
+  followUpRequired   Boolean            @default(false)
+  followUpDate       DateTime?
+  followUpStatus     String?            @default("none")
+  audioUrl           String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  healthRecords      HealthRecord[]
+  alerts             Alert[]
+  incentives         Incentive[]
+  followUps          FollowUp[]
+
+  @@index([ashaWorkerId])
+  @@index([householdId])
+  @@index([visitTime])
+  @@index([severity])
+  @@index([verificationStatus])
+}
+
+model HealthRecord {
+  id               String     @id @default(uuid())
+  visitId          String
+  visit            Visit      @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patientId        String?
+  patient          Patient?   @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  weight           Float?
+  temperature      Float?
+  bloodPressure    String?
+  symptoms         Json       @default("[]")
+  observations     Json       @default("[]")
+  medications      Json       @default("[]")
+  riskLevel        String     @default("LOW")
+  followUpRequired Boolean    @default(false)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  followUps        FollowUp[]
+
+  @@index([visitId])
+  @@index([patientId])
+}
+
+model Alert {
+  id                String      @id @default(uuid())
+  visitId           String
+  visit             Visit       @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  severity          Severity    @default(MEDIUM)
+  title             String
+  description       String      @db.Text
+  recommendedAction String      @db.Text
+  status            AlertStatus @default(OPEN)
+  acknowledgedBy    String?
+  supervisorNotes   String?     @db.Text
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([visitId])
+  @@index([severity])
+  @@index([status])
+}
+
+model FollowUp {
+  id             String        @id @default(uuid())
+  healthRecordId String?
+  healthRecord   HealthRecord? @relation(fields: [healthRecordId], references: [id], onDelete: SetNull)
+  visitId        String?
+  visit          Visit?        @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  assignedToId   String?
+  assignedTo     ASHAWorker?   @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  dueDate        DateTime?
+  status         String        @default("pending")
+  instructions   String?       @db.Text
+  completedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([assignedToId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model Incentive {
+  id           String     @id @default(uuid())
+  ashaWorkerId String
+  ashaWorker   ASHAWorker @relation(fields: [ashaWorkerId], references: [id], onDelete: Cascade)
+  visitId      String?
+  visit        Visit?     @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  taskType     String
+  amount       Float
+  bonus        Float      @default(0)
+  status       String     @default("CREDITED")
+  reason       String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([ashaWorkerId])
+  @@index([visitId])
+  @@index([status])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userName  String?
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String   @db.Text
+  type      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([read])
+}

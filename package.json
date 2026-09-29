@@ -1,0 +1,11 @@
+{
+  "name": "vaani-ai-root",
+  "private": true,
+  "prisma": {
+    "schema": "prisma/schema.prisma"
+  },
+  "scripts": {
+    "build": "npm --prefix vaani_backend-main run build",
+    "postinstall": "npm --prefix vaani_backend-main run postinstall"
+  }
+}
