@@ -2,6 +2,9 @@
   "name": "vaani-ai",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "workspaces": [
     "vaani_backend-main",
     "Vaani_frontend-main"
@@ -9,6 +12,7 @@
   "scripts": {
     "build": "npm run build --workspace=vaani_backend-main && npm run build --workspace=Vaani_frontend-main",
     "build:backend": "npm run build --workspace=vaani_backend-main",
-    "build:frontend": "npm run build --workspace=Vaani_frontend-main"
+    "build:frontend": "npm run build --workspace=Vaani_frontend-main",
+    "test": "npm test --workspace=vaani_backend-main"
   }
 }
